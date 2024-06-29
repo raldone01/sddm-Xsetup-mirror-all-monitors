@@ -1,0 +1,28 @@
+#!/bin/bash
+# Xsetup - run as root before the login dialog appears
+
+set -x
+
+all_connected_display_names=$(xrandr | grep " connected" | cut -d ' ' -f1)
+
+primary_display="DP-2"
+primary_display_resolution=$(xrandr | grep $primary_display | grep -o '[0-9]\+x[0-9]\+' | head -n1)
+
+# if primary display is not connected or the resolution was not detected, set it to the first connected display
+if [[ ! $all_connected_display_names =~ $primary_display || -z $primary_display_resolution ]]; then
+  new_primary_display=$(echo $all_connected_display_names | cut -d ' ' -f1)
+  echo "Primary display $primary_display is not connected. Setting primary display to the first connected display $new_primary_display"
+  primary_display=$new_primary_display
+  primary_display_resolution=$(xrandr | grep $new_primary_display | grep -o '[0-9]\+x[0-9]\+' | head -n1)
+fi
+
+echo "Primary display: $primary_display"
+echo "Primary display resolution: $primary_display_resolution"
+
+# loop over all displays but the primary one and set them to mirror the primary display
+# also scale them to their native resolution
+for display in $all_connected_display_names; do
+  if [[ $display != $primary_display ]]; then
+    xrandr --output $display --auto --same-as $primary_display --scale-from $primary_display_resolution
+  fi
+done
